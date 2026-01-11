@@ -15,19 +15,21 @@ Next.js 15-ზე დაფუძნებული веб-ინტერფე
 - 📱 Responsive design
 - 🎨 Scoop Lab brand design
 - ⚡ Real-time API integration
+- 🤖 **Dynamic LLM Responses** with Markdown rendering
 
 ---
 
-## ✨ ფუნქციონალი
+## ✨ ფუნქციონალი (v2.0)
 
 | Feature | აღწერა |
 |---------|--------|
 | **Chat Interface** | მესიჯების გაცვლა AI ასისტენტთან |
-| **Loading Phases** | ანიმაციური loading (🔍 ვეძებ...) |
-| **Markdown Rendering** | სრული markdown support |
-| **Quick Replies** | Backend-დან მოცემული ღილაკები |
-| **Conversation History** | Sidebar საუბრების ისტორიით |
+| **Perplexity-Style Loader** | ანიმაციური skeleton loader ("ვამოწმებ ხელმისაწვდომობას...") |
+| **Dynamic Quick Replies** | LLM-ის მიერ გენერირებული follow-up კითხვები |
+| **Markdown Rendering** | სრული markdown support პასუხებში |
+| **Conversation History** | Sidebar საუბრების ისტორიით (list-based rendering) |
 | **Scoop Lab Design** | Pine Green, sterile white, medical look |
+| **Hover Effects** | Interactive buttons with Pine Green hover state |
 
 ---
 
@@ -37,9 +39,22 @@ Next.js 15-ზე დაფუძნებული веб-ინტერფე
 |---------|-------|
 | **Primary Color** | Pine Green `#0A7364` |
 | **Background** | Sterile White `#FFFFFF` |
+| **Accent** | Metallic Gold `#D9B444` |
 | **User Messages** | Pine Green background, modern corners |
-| **Bot Messages** | Light Gray `#F9FAFB` + border |
-| **Send Button** | Circular, Pine Green |
+| **Bot Messages** | White card with light border |
+| **Buttons** | Hover: Pine Green border + tint |
+
+---
+
+## 📁 კომპონენტები
+
+| Component | აღწერა |
+|-----------|--------|
+| `Chat.tsx` | მთავარი chat component - state management, API calls |
+| `chat-response.tsx` | LLM პასუხების ჩვენება markdown-ად + quick replies |
+| `chat-loader.tsx` | Perplexity-style skeleton loader ანიმაციებით |
+| `empty-screen.tsx` | საწყისი ეკრანი კატეგორიების ღილაკებით |
+| `scoop-logo.tsx` | Scoop AI SVG ლოგო კომპონენტი |
 
 ---
 
@@ -86,7 +101,7 @@ GitHub push → ავტომატური Cloud Run deploy
 
 ### Backend Integration
 
-Widget იყენებს `/chat` endpoint-ს:
+Widget იყენებს `/chat` endpoint-ს და იღებს dynamic quick_replies:
 
 ```typescript
 const response = await fetch(`${BACKEND_URL}/chat`, {
@@ -97,26 +112,10 @@ const response = await fetch(`${BACKEND_URL}/chat`, {
         conversation_id: convId,
     }),
 });
-```
 
----
-
-## 📁 პროექტის სტრუქტურა
-
-```
-scoop-vercel/
-├── Dockerfile          # Cloud Run deploy
-├── next.config.ts      # standalone output
-├── package.json
-├── public/             # Static assets
-└── src/
-    ├── app/
-    │   ├── layout.tsx  # Root layout + fonts
-    │   └── page.tsx    # Main page
-    ├── components/
-    │   └── Chat.tsx    # Main chat component
-    └── styles/
-        └── widget.css  # Scoop Lab styling
+const data = await response.json();
+// data.response_text_geo - LLM response (markdown)
+// data.quick_replies - Dynamic follow-up buttons
 ```
 
 ---
@@ -125,6 +124,7 @@ scoop-vercel/
 
 - [claude-agent-experiments](https://github.com/Maqashable-284/claude-agent-experiments) - Python Backend (Claude Agent SDK)
 - [scoop-chainlit](https://github.com/Maqashable-284/scoop-chainlit) - Chainlit Web UI
+- [Vercel-designer](https://github.com/Maqashable-284/Vercel-designer) - Design Source
 
 ---
 
