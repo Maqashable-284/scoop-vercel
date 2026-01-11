@@ -1,36 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Scoop AI Next.js Frontend 🍨
 
-## Getting Started
+**ქართული სპორტული კვების AI ჩატბოტის веб-ინტერფეისი**
 
-First, run the development server:
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
+[![Cloud Run](https://img.shields.io/badge/Google-Cloud%20Run-blue.svg)](https://cloud.google.com/run)
+
+---
+
+## 🎯 რა არის?
+
+Next.js 15-ზე დაფუძნებული веб-ინტერფეისი **Scoop AI Agent**-ისთვის. სრული ფუნქციონალით:
+- 💬 Chat interface ქართულ ენაზე
+- 📱 Responsive design
+- 🎨 Scoop Lab brand design
+- ⚡ Real-time API integration
+
+---
+
+## ✨ ფუნქციონალი
+
+| Feature | აღწერა |
+|---------|--------|
+| **Chat Interface** | მესიჯების გაცვლა AI ასისტენტთან |
+| **Loading Phases** | ანიმაციური loading (🔍 ვეძებ...) |
+| **Markdown Rendering** | სრული markdown support |
+| **Quick Replies** | Backend-დან მოცემული ღილაკები |
+| **Conversation History** | Sidebar საუბრების ისტორიით |
+| **Scoop Lab Design** | Pine Green, sterile white, medical look |
+
+---
+
+## 🎨 Design - Scoop Lab Brand
+
+| Element | Style |
+|---------|-------|
+| **Primary Color** | Pine Green `#0A7364` |
+| **Background** | Sterile White `#FFFFFF` |
+| **User Messages** | Pine Green background, modern corners |
+| **Bot Messages** | Light Gray `#F9FAFB` + border |
+| **Send Button** | Circular, Pine Green |
+
+---
+
+## 🚀 Development
 
 ```bash
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+გახსენით http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📦 Build & Deploy
 
-## Learn More
+### Local Build
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Docker (Cloud Run)
+```bash
+docker build -t scoop-vercel .
+docker run -p 8080:8080 scoop-vercel
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Cloud Run Auto-Deploy
+GitHub push → ავტომატური Cloud Run deploy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🔧 Configuration
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Environment Variables
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Variable | Default |
+|----------|---------|
+| `NEXT_PUBLIC_BACKEND_URL` | `https://scoop-ai-sdk-xxx.run.app` |
+
+### Backend Integration
+
+Widget იყენებს `/chat` endpoint-ს:
+
+```typescript
+const response = await fetch(`${BACKEND_URL}/chat`, {
+    method: 'POST',
+    body: JSON.stringify({
+        user_id: `widget_${convId}`,
+        message: text,
+        conversation_id: convId,
+    }),
+});
+```
+
+---
+
+## 📁 პროექტის სტრუქტურა
+
+```
+scoop-vercel/
+├── Dockerfile          # Cloud Run deploy
+├── next.config.ts      # standalone output
+├── package.json
+├── public/             # Static assets
+└── src/
+    ├── app/
+    │   ├── layout.tsx  # Root layout + fonts
+    │   └── page.tsx    # Main page
+    ├── components/
+    │   └── Chat.tsx    # Main chat component
+    └── styles/
+        └── widget.css  # Scoop Lab styling
+```
+
+---
+
+## 🔗 Related Repositories
+
+- [claude-agent-experiments](https://github.com/Maqashable-284/claude-agent-experiments) - Python Backend (Claude Agent SDK)
+- [scoop-chainlit](https://github.com/Maqashable-284/scoop-chainlit) - Chainlit Web UI
+
+---
+
+## 📄 License
+
+MIT
