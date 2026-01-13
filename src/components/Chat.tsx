@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Settings, Send, Sparkles, MessageSquare, Info, Menu, X, Trash2, AlertTriangle } from 'lucide-react';
+import { Settings, Send, Menu, AlertTriangle } from 'lucide-react';
 import { EmptyScreen } from './empty-screen';
 import { ChatLoader } from './chat-loader';
 import { ChatResponse } from './chat-response';
 import { ScoopLogo } from './scoop-logo';
+import { Sidebar } from './sidebar';
 
 // Backend API URL - Production Cloud Run
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://scoop-ai-sdk-358331686110.europe-west1.run.app';
@@ -27,112 +28,12 @@ interface Conversation {
     id: string;
     title: string;
     messages: Message[];
+    created_at?: string;
+    updated_at?: string;
 }
 
 // Generate unique ID
 const generateId = () => Math.random().toString(36).substring(2, 15);
-
-// Sidebar Component
-function Sidebar({
-    conversations,
-    activeId,
-    onNewChat,
-    onSelect,
-    onClose,
-    onDeleteData,
-    isOpen,
-}: {
-    conversations: { id: string; title: string }[];
-    activeId: string | null;
-    onNewChat: () => void;
-    onSelect: (id: string) => void;
-    onClose: () => void;
-    onDeleteData: () => void;
-    isOpen: boolean;
-}) {
-    return (
-        <>
-            {/* Mobile backdrop */}
-            {isOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                    onClick={onClose}
-                />
-            )}
-
-            <div className={`
-                fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
-                ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-            `}>
-                <div className="h-full flex flex-col bg-sidebar border-r border-sidebar-border">
-                    {/* New conversation button */}
-                    <div className="p-4">
-                        <button
-                            onClick={onNewChat}
-                            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold hover:opacity-90 transition-opacity text-white"
-                            style={{ backgroundColor: '#0A7364' }}
-                        >
-                            <Sparkles className="w-4 h-4" style={{ color: '#D9B444' }} />
-                            <span>ახალი საუბარი</span>
-                        </button>
-                    </div>
-
-                    {/* Close button for mobile */}
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 p-1.5 hover:bg-sidebar-accent rounded-md lg:hidden transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-
-                    {/* Recent conversations */}
-                    <div className="flex-1 px-4 overflow-y-auto">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 font-medium">
-                            <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
-                            <span>ბოლო საუბრები</span>
-                        </div>
-
-                        {conversations.length === 0 ? (
-                            <div className="text-sm text-muted-foreground/60 py-8 text-center">
-                                საუბრები არ არის...
-                            </div>
-                        ) : (
-                            <div className="space-y-1">
-                                {conversations.map((conv) => (
-                                    <button
-                                        key={conv.id}
-                                        onClick={() => onSelect(conv.id)}
-                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors truncate ${activeId === conv.id
-                                            ? 'bg-sidebar-accent text-foreground font-medium'
-                                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground'
-                                            }`}
-                                    >
-                                        {conv.title}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* About assistant */}
-                    <div className="p-4 border-t border-sidebar-border space-y-1">
-                        <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors w-full px-3 py-2 rounded-md hover:bg-sidebar-accent">
-                            <Info className="w-4 h-4" strokeWidth={1.5} />
-                            <span>ასისტენტის შესახებ</span>
-                        </button>
-                        <button
-                            onClick={onDeleteData}
-                            className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 transition-colors w-full px-3 py-2 rounded-md hover:bg-red-50"
-                        >
-                            <Trash2 className="w-4 h-4" strokeWidth={1.5} />
-                            <span>წაშალე მონაცემები</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </>
-    );
-}
 
 // Fallback Message Bubble (for older history or simple texts)
 function MessageBubble({ message }: { message: Message }) {
@@ -257,10 +158,17 @@ export default function Chat() {
 
                 if (data.sessions && data.sessions.length > 0) {
                     // Convert backend sessions to frontend Conversation format
-                    const loadedConvs: Conversation[] = data.sessions.map((s: { session_id: string; title: string }) => ({
+                    const loadedConvs: Conversation[] = data.sessions.map((s: {
+                        session_id: string;
+                        title: string;
+                        created_at?: string;
+                        updated_at?: string;
+                    }) => ({
                         id: s.session_id,
                         title: s.title || 'ახალი საუბარი',
                         messages: [], // Will be loaded when selected
+                        created_at: s.created_at,
+                        updated_at: s.updated_at,
                     }));
                     setConversations(loadedConvs);
                 }
@@ -520,7 +428,12 @@ export default function Chat() {
     return (
         <div className="flex h-screen bg-background">
             <Sidebar
-                conversations={conversations.map((c) => ({ id: c.id, title: c.title }))}
+                conversations={conversations.map((c) => ({
+                    id: c.id,
+                    title: c.title,
+                    created_at: c.created_at,
+                    updated_at: c.updated_at
+                }))}
                 activeId={activeId}
                 onNewChat={startNewChat}
                 onSelect={(id) => {

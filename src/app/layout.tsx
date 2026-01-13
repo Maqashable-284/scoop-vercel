@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ka">
-      <body className={`${notoSans.variable} antialiased`}>
+      <body className={`${notoSans.variable} antialiased`} suppressHydrationWarning>
         {children}
       </body>
     </html>

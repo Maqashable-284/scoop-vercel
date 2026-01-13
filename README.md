@@ -51,6 +51,7 @@ Next.js 15-ზე დაფუძნებული веб-ინტერფე
 | Component | აღწერა |
 |-----------|--------|
 | `Chat.tsx` | მთავარი chat component - state management, API calls, smart scroll |
+| `sidebar.tsx` | Sidebar component - conversation history, date grouping, thematic icons |
 | `chat-response.tsx` | LLM პასუხების ჩვენება markdown-ად + quick replies |
 | `chat-loader.tsx` | Perplexity-style skeleton loader ანიმაციებით |
 | `empty-screen.tsx` | საწყისი ეკრანი მიზნების არჩევით (კუნთი, წონა, ენერგია, დამწყები) |
@@ -62,6 +63,7 @@ Next.js 15-ზე დაფუძნებული веб-ინტერფე
 | Utility | აღწერა |
 |---------|--------|
 | `lib/parseProducts.ts` | Markdown-დან პროდუქტების ამოღება და deduplication |
+| `lib/groupConversations.ts` | Conversation date grouping utility (Today, Yesterday, Previous 7 Days) |
 
 ---
 
@@ -128,6 +130,14 @@ const data = await response.json();
 ---
 
 ## 📊 Recent Updates
+
+### v2.2.0 (2026-01-13) - Sidebar UI/UX Enhancements
+- 🎨 **Thematic Icons**: Dynamic icon selection based on conversation topic (8 categories)
+- 📅 **Date Grouping**: Conversations grouped by "Today", "Yesterday", "Previous 7 Days"
+- ⏰ **24-Hour Time Format**: Timestamps in HH:MM format (Tbilisi UTC+4)
+- 🎯 **Active State**: Pine Green border and background for selected conversation
+- 🔧 **Component Refactoring**: Sidebar extracted to `src/components/sidebar.tsx`
+- 🌍 **Timezone Fix**: Proper UTC to Tbilisi (Asia/Tbilisi) conversion
 
 ### v2.1.0 (2026-01-13)
 - 🔧 **Layout Fix**: Skeleton loader during history load (prevents container shrinking)
