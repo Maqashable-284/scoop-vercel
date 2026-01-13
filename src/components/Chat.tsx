@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Settings, Send, Sparkles, MessageSquare, Info, Menu, X } from 'lucide-react';
+import { Settings, Send, Sparkles, MessageSquare, Info, Menu, X, Trash2, AlertTriangle } from 'lucide-react';
 import { EmptyScreen } from './empty-screen';
 import { ChatLoader } from './chat-loader';
 import { ChatResponse } from './chat-response';
@@ -39,6 +39,7 @@ function Sidebar({
     onNewChat,
     onSelect,
     onClose,
+    onDeleteData,
     isOpen,
 }: {
     conversations: { id: string; title: string }[];
@@ -46,6 +47,7 @@ function Sidebar({
     onNewChat: () => void;
     onSelect: (id: string) => void;
     onClose: () => void;
+    onDeleteData: () => void;
     isOpen: boolean;
 }) {
     return (
@@ -113,10 +115,17 @@ function Sidebar({
                     </div>
 
                     {/* About assistant */}
-                    <div className="p-4 border-t border-sidebar-border">
+                    <div className="p-4 border-t border-sidebar-border space-y-1">
                         <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors w-full px-3 py-2 rounded-md hover:bg-sidebar-accent">
                             <Info className="w-4 h-4" strokeWidth={1.5} />
                             <span>ასისტენტის შესახებ</span>
+                        </button>
+                        <button
+                            onClick={onDeleteData}
+                            className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 transition-colors w-full px-3 py-2 rounded-md hover:bg-red-50"
+                        >
+                            <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                            <span>წაშალე მონაცემები</span>
                         </button>
                     </div>
                 </div>
@@ -157,12 +166,142 @@ export default function Chat() {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [userId, setUserId] = useState<string>('');
+    const [sessionsLoaded, setSessionsLoaded] = useState(false);
+    const [showConsentModal, setShowConsentModal] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const activeConversation = conversations.find((c) => c.id === activeId);
 
     // Last user message ref for smart scrolling
     const lastUserMessageRef = useRef<HTMLDivElement>(null);
+
+    // Initialize persistent userId on mount (client-side only to avoid hydration mismatch)
+    useEffect(() => {
+        // Check consent first
+        const hasConsent = localStorage.getItem('scoop_history_consent');
+        if (!hasConsent) {
+            setShowConsentModal(true);
+        }
+
+        const stored = localStorage.getItem('scoop_user_id');
+        if (stored) {
+            setUserId(stored);
+        } else {
+            const newId = `widget_${Math.random().toString(36).substring(2, 15)}`;
+            localStorage.setItem('scoop_user_id', newId);
+            setUserId(newId);
+        }
+    }, []);
+
+    // Handle consent acceptance
+    const handleAcceptConsent = useCallback(() => {
+        localStorage.setItem('scoop_history_consent', 'true');
+        setShowConsentModal(false);
+    }, []);
+
+    // Handle consent rejection (don't save history)
+    const handleRejectConsent = useCallback(() => {
+        localStorage.setItem('scoop_history_consent', 'false');
+        setShowConsentModal(false);
+    }, []);
+
+    // Handle delete all user data
+    const handleDeleteData = useCallback(async () => {
+        if (!userId) return;
+
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`${BACKEND_URL}/user/${userId}/data`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                // Clear localStorage
+                localStorage.removeItem('scoop_user_id');
+                localStorage.removeItem('scoop_history_consent');
+
+                // Reset state
+                setConversations([]);
+                setActiveId(null);
+                setSessionsLoaded(false);
+                setShowDeleteConfirm(false);
+
+                // Generate new userId
+                const newId = `widget_${Math.random().toString(36).substring(2, 15)}`;
+                localStorage.setItem('scoop_user_id', newId);
+                setUserId(newId);
+
+                // Show consent modal again
+                setShowConsentModal(true);
+            }
+        } catch (error) {
+            console.error('[Scoop] Failed to delete data:', error);
+        } finally {
+            setIsDeleting(false);
+        }
+    }, [userId]);
+
+    // Load sessions from backend on mount
+    useEffect(() => {
+        if (!userId || sessionsLoaded) return;
+
+        const loadSessions = async () => {
+            try {
+                const res = await fetch(`${BACKEND_URL}/sessions/${userId}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (data.sessions && data.sessions.length > 0) {
+                    // Convert backend sessions to frontend Conversation format
+                    const loadedConvs: Conversation[] = data.sessions.map((s: { session_id: string; title: string }) => ({
+                        id: s.session_id,
+                        title: s.title || 'ახალი საუბარი',
+                        messages: [], // Will be loaded when selected
+                    }));
+                    setConversations(loadedConvs);
+                }
+                setSessionsLoaded(true);
+            } catch (error) {
+                console.error('[Scoop] Failed to load sessions:', error);
+                setSessionsLoaded(true);
+            }
+        };
+
+        loadSessions();
+    }, [userId, sessionsLoaded]);
+
+    // Load session history when selecting from sidebar
+    const loadSessionHistory = useCallback(async (sessionId: string) => {
+        setIsLoadingHistory(true);
+        try {
+            const res = await fetch(`${BACKEND_URL}/session/${sessionId}/history`);
+            if (!res.ok) return;
+            const data = await res.json();
+
+            if (data.messages) {
+                const messages: Message[] = data.messages.map((m: { role: string; content: string }, idx: number) => ({
+                    id: `${sessionId}_${idx}`,
+                    role: m.role as 'user' | 'assistant',
+                    content: m.content,
+                }));
+
+                // Update the conversation with loaded messages
+                setConversations(prev => prev.map(conv =>
+                    conv.id === sessionId
+                        ? { ...conv, messages }
+                        : conv
+                ));
+            }
+        } catch (error) {
+            console.error('[Scoop] Failed to load session history:', error);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    }, []);
 
     // Auto-scroll: scroll to user's message so response starts visible
     useEffect(() => {
@@ -237,9 +376,9 @@ export default function Chat() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        user_id: `widget_${convId}`,
+                        user_id: userId,
                         message: text,
-                        conversation_id: convId,
+                        session_id: convId,
                     }),
                 });
 
@@ -276,7 +415,7 @@ export default function Chat() {
                 setIsLoading(false);
             }
         },
-        [activeId, createNewConversation, isLoading]
+        [activeId, createNewConversation, isLoading, userId]
     );
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -286,6 +425,27 @@ export default function Chat() {
 
     // Render logic to support history + ChatResponse
     const renderChatHistory = () => {
+        // Show skeleton while loading history to prevent layout shift
+        if (isLoadingHistory) {
+            return (
+                <div className="max-w-3xl mx-auto px-6 py-6 space-y-6 animate-pulse">
+                    {/* Skeleton for user message */}
+                    <div className="flex justify-end">
+                        <div className="bg-gray-200 h-10 w-48 rounded-xl" />
+                    </div>
+                    {/* Skeleton for assistant message */}
+                    <div className="flex gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gray-200 flex-shrink-0" />
+                        <div className="flex-1 space-y-2">
+                            <div className="bg-gray-200 h-4 w-full rounded" />
+                            <div className="bg-gray-200 h-4 w-3/4 rounded" />
+                            <div className="bg-gray-200 h-4 w-1/2 rounded" />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         if (!activeConversation || activeConversation.messages.length === 0) {
             return <EmptyScreen setInput={(text: string) => sendMessage(text)} />;
         }
@@ -366,10 +526,77 @@ export default function Chat() {
                 onSelect={(id) => {
                     setActiveId(id);
                     setSidebarOpen(false);
+                    // Load history if not already loaded
+                    const conv = conversations.find(c => c.id === id);
+                    if (conv && conv.messages.length === 0) {
+                        loadSessionHistory(id);
+                    }
                 }}
                 onClose={() => setSidebarOpen(false)}
+                onDeleteData={() => setShowDeleteConfirm(true)}
                 isOpen={sidebarOpen}
             />
+
+            {/* Consent Modal */}
+            {showConsentModal && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+                        <h2 className="text-lg font-semibold mb-3">ისტორიის შენახვა</h2>
+                        <p className="text-sm text-gray-600 mb-4">
+                            გსურს რომ შევინახოთ შენი საუბრების ისტორია?
+                            ეს საშუალებას მოგცემს ძველი საუბრების გაგრძელებას გვერდის გადატვირთვის შემდეგ.
+                            მონაცემები 7 დღის შემდეგ ავტომატურად იშლება.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleRejectConsent}
+                                className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
+                                არა
+                            </button>
+                            <button
+                                onClick={handleAcceptConsent}
+                                className="flex-1 py-2 px-4 rounded-lg text-white hover:opacity-90"
+                                style={{ backgroundColor: '#0A7364' }}
+                            >
+                                დიახ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+                        <div className="flex items-center gap-3 mb-3">
+                            <AlertTriangle className="w-6 h-6 text-red-500" />
+                            <h2 className="text-lg font-semibold">მონაცემების წაშლა</h2>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                            დარწმუნებული ხარ? ეს წაშლის ყველა შენს საუბარს და მონაცემს.
+                            ეს მოქმედება ვერ გაუქმებელია.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                                disabled={isDeleting}
+                            >
+                                გაუქმება
+                            </button>
+                            <button
+                                onClick={handleDeleteData}
+                                disabled={isDeleting}
+                                className="flex-1 py-2 px-4 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                            >
+                                {isDeleting ? 'იშლება...' : 'წაშლა'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Mobile header */}

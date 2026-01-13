@@ -127,11 +127,25 @@ const data = await response.json();
 
 ---
 
+## 📊 Recent Updates
+
+### v2.1.0 (2026-01-13)
+- 🔧 **Layout Fix**: Skeleton loader during history load (prevents container shrinking)
+- 🔒 **Privacy Controls**: Consent modal + delete data button
+- 📜 **History Retrieval**: Load conversation history from sidebar
+- 🎨 **UX**: Smoother transitions between conversations
+
+### v2.0.0 (2026-01-12)
+- 🎨 **Perplexity-Style Loader**: Animated skeleton loader
+- 💬 **Dynamic Quick Replies**: LLM-generated follow-up questions
+- 📝 **Markdown Rendering**: Full markdown support in responses
+
+---
+
 ## 🔗 Related Repositories
 
-- [claude-agent-experiments](https://github.com/Maqashable-284/claude-agent-experiments) - Python Backend (Claude Agent SDK)
+- [scoop-genai-project](https://github.com/Maqashable-284/scoop-genai-project) - Python Backend (Gemini SDK)
 - [scoop-chainlit](https://github.com/Maqashable-284/scoop-chainlit) - Chainlit Web UI
-- [Vercel-designer](https://github.com/Maqashable-284/Vercel-designer) - Design Source
 
 ---
 
