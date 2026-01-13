@@ -213,7 +213,26 @@ export function parseProductsFromMarkdown(markdown: string): ParsedResponse {
                 // Skip very short lines or single words (likely section headers/leftovers)
                 const isShortLine = line.length < 15;
                 const isSingleWord = !line.includes(' ');
-                if (!isShortLine && !isSingleWord) {
+
+                // Skip known category headers and section titles
+                const knownCategoryHeaders = [
+                    'ვიტამინები და აქსესუარები',
+                    'პროტეინები',
+                    'კრეატინები',
+                    'პრე-ვორქაუთები',
+                    'ამინომჟავები',
+                    'წონის კონტროლი',
+                    'აქსესუარები',
+                    'შეიკერები',
+                    'რეკომენდებული კომბინაცია',
+                    'გეინერები',
+                ];
+                const isCategoryHeader = knownCategoryHeaders.some(header =>
+                    line.toLowerCase().includes(header.toLowerCase()) ||
+                    line === header
+                );
+
+                if (!isShortLine && !isSingleWord && !isCategoryHeader) {
                     outro += (outro ? '\n' : '') + line;
                 }
             }
