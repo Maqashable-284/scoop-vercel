@@ -153,22 +153,24 @@ export function parseProductsFromMarkdown(markdown: string): ParsedResponse {
         }
 
         // Check for product name (bold text that's not a rank and not price)
-        const productNameMatch = line.match(/^\*\*([^*]+)\*\*$/);
+        // Allow trailing whitespace for Gemini 3 compatibility
+        const productNameMatch = line.match(/^\*\*([^*]+)\*\*\s*$/);
         if (productNameMatch && !line.includes('₾') && !line.includes('შემდეგი')) {
             if (!currentProduct) {
                 currentProduct = {};
                 introEnded = true;
             }
             if (!currentProduct.name) {
-                currentProduct.name = productNameMatch[1];
+                currentProduct.name = productNameMatch[1].trim();
                 continue;
             }
         }
 
         // Check for brand (italic text)
-        const brandMatch = line.match(/^\*([^*]+)\*$/);
+        // Allow trailing whitespace for Gemini 3 compatibility
+        const brandMatch = line.match(/^\*([^*]+)\*\s*$/);
         if (brandMatch && currentProduct && !currentProduct.brand) {
-            currentProduct.brand = brandMatch[1];
+            currentProduct.brand = brandMatch[1].trim();
             continue;
         }
 
